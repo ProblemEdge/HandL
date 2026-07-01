@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ハイアンドロー (High & Low) - 文化祭スペシャル 全画面版</title>
+    <!-- QRコード読み取り用ライブラリをCDNからロード -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        /* ==========================================
+           全体設定（全画面対応）
+        ========================================== */
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            width: 100vw;
+            height: 100vh;
+            color: #fff;
+            user-select: none;
+            overflow: hidden; /* スクロールバーを消す */
+        }
+
+        /* ゲーム外枠（画面全体に広げる） */
+        .game-container {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, #14623a 0%, #0a3d20 100%);
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* 画面の切り替え用設定 */
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            box-sizing: border-box;
+            padding: 5vh 5vw; /* 全画面用の余白 */
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* 画面ごとの縦配置の調整 */
+        #screen-home { justify-content: center; gap: 8vh; }
+        #screen-qr   { justify-content: center; gap: 4vh; }
+        #screen-game { justify-content: space-between; }
+
+        /* ==========================================
+           1. ホーム画面
+        ========================================== */
+        .home-title {
+            /* 画面サイズに合わせて文字を巨大化 */
+            font-size: clamp(3.5rem, 8vw, 7rem);
+            font-weight: 900;
+            letter-spacing: 4px;
+            text-shadow: 4px 4px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000;
+            background: linear-gradient(45deg, #ffffff 30%, #ff8888 70%, #ff3b30 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .mode-btn-container {
+            display: flex;
+            gap: 10vw; /* ボタン同士の間隔 */
+        }
+
+        .btn-circle {
+            /* ボタンも画面に合わせて大きく */
+            width: clamp(160px, 20vw, 260px);
+            height: clamp(160px, 20vw, 260px);
+            border-radius: 50%;
+            border: 6px solid #fff;
+            font-size: clamp(1.3rem, 2.5vw, 2.5rem);
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            transition: transform 0.1s, box-shadow 0.1s;
+            outline: none;
+        }
+
+        .btn-circle:active {
+            transform: scale(0.95);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .btn-green { background-color: #72d553; }
+        .btn-red { background-color: #ff3b30; }
+
+        /* ==========================================
+           2. QRコード画面
+        ========================================== */
+        .screen-qr-bg {
+            background: #111111;
+            background-image: radial-gradient(#2c2c2c 15%, transparent 16%);
+            background-size: 16px 16px;
+        }
+
+        .qr-title {
+            font-size: clamp(2rem, 4vw, 3.5rem);
+            font-family: 'Hiragino Mincho ProN', 'Georgia', serif;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            text-align: center;
+        }
+
+        .qr-container-box {
+            position: relative;
+            /* スキャン枠も画面に合わせて拡張 */
+            width: clamp(250px, 40vh, 450px);
+            height: clamp(250px, 40vh, 450px);
+            background-color: #000;
+            border: 4px solid #fff;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        #reader { width: 100% !important; height: 100% !important; }
+        #reader video { object-fit: cover !important; }
+
+        .manual-input-area {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .text-input {
+            padding: 12px;
+            font-size: clamp(1rem, 1.5vw, 1.5rem);
+            border-radius: 6px;
+            border: none;
+            width: clamp(150px, 20vw, 250px);
+        }
+
+        .error-msg {
+            color: #e74c3c;
+            font-size: clamp(1rem, 1.5vw, 1.5rem);
+            font-weight: bold;
+            display: none;
+        }
+
+        /* ==========================================
+           3. ゲームプレイ画面
+        ========================================== */
+        .game-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: clamp(1.2rem, 2vw, 2.2rem);
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+            padding-bottom: 15px;
+        }
+
+        .game-board {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10vw; /* カード間のスペース */
+        }
+
+        .card-slot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-label {
+            font-size: clamp(1rem, 1.5vw, 1.8rem);
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* トランプカードの巨大化 */
+        .card {
+            width: clamp(120px, 18vw, 220px);
+            height: clamp(180px, 27vw, 330px);
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.6);
+            color: black;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: clamp(10px, 1.5vw, 20px);
+            box-sizing: border-box;
+        }
+
+        .card.back {
+            background-color: #b22222;
+            background-image: repeating-linear-gradient(45deg, #8b0000 0px, #8b0000 15px, #b22222 15px, #b22222 30px);
+            border: 4px solid white;
+        }
+
+        .card-corner {
+            font-size: clamp(1.5rem, 2.5vw, 3rem);
+            font-weight: bold;
+            line-height: 1;
+        }
+        .card-corner.bottom-right { align-self: flex-end; transform: rotate(180deg); }
+        .card-center { font-size: clamp(3rem, 6vw, 7rem); align-self: center; }
+        .red-suit { color: #d32f2f; }
+
+        /* 操作パネル */
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3vh;
+            width: 100%;
+        }
+
+        .game-msg {
+            font-size: clamp(1.2rem, 2vw, 2.5rem);
+            color: #f1c40f;
+            text-align: center;
+            min-height: 3rem;
+        }
+
+        .guess-buttons {
+            display: flex;
+            gap: 5vw;
+        }
+
+        .btn-action {
+            padding: 15px 40px;
+            font-size: clamp(1.2rem, 2vw, 2rem);
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            transition: transform 0.1s;
+        }
+        .btn-action:active { transform: scale(0.95); }
+
+        .btn-high { background-color: #28a745; }
+        .btn-low { background-color: #dc3545; }
+        .btn-gray { background-color: #6c757d; }
+        .btn-yellow { background-color: #f1c40f; color: black; }
+
+        /* ==========================================
+           4. リザルトオーバーレイ（ド派手演出）
+        ========================================== */
+        .result-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: overlayFadeIn 0.25s ease-out forwards;
+        }
+
+        .result-overlay.win { background: rgba(14, 82, 41, 0.96); border: 15px solid #f1c40f; box-sizing: border-box; }
+        .result-overlay.win .result-title { color: #f1c40f; }
+
+        .result-overlay.lose {
+            background: rgba(120, 15, 15, 0.98); border: 15px solid #e74c3c; box-sizing: border-box;
+            animation: screenShake 0.4s ease-in-out;
+        }
+        .result-overlay.lose .result-title { color: #ffffff; }
+
+        .result-overlay.collect { background: rgba(14, 52, 82, 0.96); border: 15px solid #3498db; box-sizing: border-box; }
+        .result-overlay.collect .result-title { color: #3498db; }
+
+        .result-title {
+            font-size: clamp(4rem, 10vw, 8rem);
+            font-weight: 900;
+            margin-bottom: 2vh;
+            text-shadow: 6px 6px 0px #000;
+            animation: textPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            text-align: center;
+        }
+
+        .result-sub {
+            font-size: clamp(1.8rem, 4vw, 3.5rem);
+            font-weight: bold;
+            margin-bottom: 5vh;
+            text-shadow: 3px 3px 0px #000;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .overlay-btn-container {
+            display: flex;
+            gap: 4vw;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn-huge {
+            padding: 20px 40px;
+            font-size: clamp(1.2rem, 2.5vw, 2.2rem);
+            font-weight: bold;
+            border-radius: 40px;
+            border: 4px solid #fff;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+        }
+        .btn-huge:active { transform: scale(0.95); }
+
+        /* アニメーション定義 */
+        @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes textPop { from { transform: scale(0.5); } to { transform: scale(1); } }
+        @keyframes screenShake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-15px); }
+            20%, 40%, 60%, 80% { transform: translateX(15px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+
+        <!-- SCREEN 1: ホーム画面 -->
+        <div id="screen-home" class="screen active">
+            <div class="home-title">ハイアンドロー</div>
+            <div class="mode-btn-container">
+                <button class="btn-circle btn-green" onclick="startGame('normal')">通常モード</button>
+                <button class="btn-circle btn-red" onclick="selectCasinoMode()">カジノモード</button>
+            </div>
+            <div style="font-size: clamp(1rem, 1.5vw, 1.5rem); color: rgba(255,255,255,0.6);">モードを選択して開始してください</div>
+        </div>
+
+        <!-- SCREEN 2: QRコード読み取り画面 -->
+        <div id="screen-qr" class="screen screen-qr-bg">
+            <div class="qr-title">QRコードを読み込んでください</div>
+            
+            <div class="qr-container-box">
+                <!-- カメラプレビュー用の領域 -->
+                <div id="reader"></div>
+            </div>
+
+            <div class="manual-input-area">
+                <input type="text" id="manual-player-id" class="text-input" placeholder="player_123">
+                <button class="btn-action btn-yellow" style="padding: 12px 25px;" onclick="handleManualPlayerId()">決定</button>
+            </div>
+            <div id="manual-error-msg" class="error-msg">IDを入力してください</div>
+
+            <button class="btn-action btn-gray" style="margin-top: 2vh;" onclick="cancelQRScanner()">キャンセル</button>
+        </div>
+
+        <!-- SCREEN 3: ゲームプレイ画面 -->
+        <div id="screen-game" class="screen">
+            <!-- ド派手な勝敗演出用オーバーレイ -->
+            <div id="result-overlay" class="result-overlay">
+                <div id="overlay-title" class="result-title">WIN !!</div>
+                <div id="overlay-sub" class="result-sub">2倍獲得！ (20チップ)</div>
+                <div class="overlay-btn-container" id="overlay-buttons">
+                    <!-- JSから動的にボタンを生成 -->
+                </div>
+            </div>
+
+            <div class="game-header">
+                <span id="label-mode">モード: -</span>
+                <span id="label-player-id" style="color: #f1c40f;"></span>
+                <span id="label-score" style="display: none;">スコア: 0</span>
+                <span id="label-chips" style="display: none;">チップ: -</span>
+            </div>
+
+            <div class="game-board">
+                <div class="card-slot">
+                    <span class="card-label">現在のカード</span>
+                    <div id="card-current" class="card"></div>
+                </div>
+                <div class="card-slot">
+                    <span class="card-label">次のカード</span>
+                    <div id="card-next" class="card back"></div>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <div id="game-info-msg" class="game-msg">次のカードは、現在より大きい(HIGH)か小さい(LOW)か？</div>
+                
+                <div class="guess-buttons" id="action-buttons" style="display: none;">
+                    <button class="btn-action btn-high" onclick="makeGuess('high')">HIGH (高い)</button>
+                    <button class="btn-action btn-low" onclick="makeGuess('low')">LOW (低い)</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // データベース（API）連携の設定項目
+        // ==========================================
+        const USE_REAL_DB = true;
+        const API_BASE_URL = 'https://welbnkxi.vercel.app';
+
+        async function fetchPlayerChips(playerId) {
+            if (!USE_REAL_DB) {
+                let localChips = localStorage.getItem(`player_${playerId}_chips`);
+                if (localChips === null) {
+                    localChips = 100;
+                    localStorage.setItem(`player_${playerId}_chips`, localChips);
+                }
+                return parseInt(localChips, 10);
+            }
+            try {
+                const numericId = Number(playerId);
+                const response = await fetch(`${API_BASE_URL}/api/player/${numericId}`);
+                if (!response.ok) throw new Error('Player fetch failed');
+                
+                const data = await response.json();
+                return Number(data.chips);
+            } catch (error) {
+                console.error("DBからのデータ取得に失敗:", error);
+                return 100;
+            }
+        }
+
+        async function updatePlayerChipsDelta(playerId, delta) {
+            if (!USE_REAL_DB) {
+                let localChips = parseInt(localStorage.getItem(`player_${playerId}_chips`) || "100", 10);
+                localChips += delta;
+                localStorage.setItem(`player_${playerId}_chips`, localChips);
+                return localChips;
+            }
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/chips`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        playerId: Number(playerId),
+                        delta: Number(delta)
+                    })
+                });
+                if (!response.ok) throw new Error('Chips update failed');
+
+                const data = await response.json();
+                return Number(data.chips);
+            } catch (error) {
+                console.error("DBへのチップ数更新(POST)に失敗しました:", error);
+                return chips + delta;
+            }
+        }
+
+        // ==========================================
+        // ゲーム管理変数・ロジック
+        // ==========================================
+        let gameMode = 'normal';
+        let score = 0;
+        let chips = 0;
+        let activePlayerId = "";
+        let currentCard = null;
+        let nextCard = null;
+        let html5QrCode = null;
+        const FIXED_BET = 10;
+
+        let winStreak = 0;
+        let potentialPayout = 0;
+        const MAX_MULTIPLIER = 10;
+
+        const suits = [
+            { symbol: '♠', isRed: false }, { symbol: '♥', isRed: true },
+            { symbol: '♦', isRed: true }, { symbol: '♣', isRed: false }
+        ];
+        const cardValues = [
+            { display: 'A', value: 1 }, { display: '2', value: 2 }, { display: '3', value: 3 },
+            { display: '4', value: 4 }, { display: '5', value: 5 }, { display: '6', value: 6 },
+            { display: '7', value: 7 }, { display: '8', value: 8 }, { display: '9', value: 9 },
+            { display: '10', value: 10 }, { display: 'J', value: 11 }, { display: 'Q', value: 12 },
+            { display: 'K', value: 13 }
+        ];
+
+        function changeScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function selectCasinoMode() {
+            document.getElementById('manual-error-msg').style.display = 'none';
+            document.getElementById('manual-player-id').value = '';
+            changeScreen('screen-qr');
+            startQRScanner();
+        }
+
+        function startQRScanner() {
+            if (typeof Html5Qrcode === 'undefined') {
+                console.error("Html5Qrcodeライブラリが見つかりません");
+                return;
+            }
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 180, height: 180 } };
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText) => {
+                    handlePlayerScanned(decodedText);
+                    stopQRScanner();
+                },
+                (errorMessage) => {}
+            ).catch(err => {
+                console.warn("カメラの起動に失敗しました: ", err);
+            });
+        }
+
+        function stopQRScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(err => console.error("Scanner stop error:", err));
+            }
+        }
+
+        function cancelQRScanner() {
+            stopQRScanner();
+            changeScreen('screen-home');
+        }
+
+        function handleManualPlayerId() {
+            const val = document.getElementById('manual-player-id').value.trim();
+            const errMsg = document.getElementById('manual-error-msg');
+            if (val) {
+                errMsg.style.display = 'none';
+                handlePlayerScanned(val);
+                stopQRScanner();
+            } else {
+                errMsg.style.display = 'block';
+            }
+        }
+
+        async function handlePlayerScanned(playerId) {
+            activePlayerId = playerId;
+            document.getElementById('label-player-id').innerText = `ID: ${playerId}`;
+            chips = await fetchPlayerChips(playerId);
+            startGame('casino');
+        }
+
+        function getRandomCard() {
+            const suit = suits[Math.floor(Math.random() * suits.length)];
+            const valueInfo = cardValues[Math.floor(Math.random() * cardValues.length)];
+            return {
+                suit: suit.symbol, isRed: suit.isRed,
+                display: valueInfo.display, value: valueInfo.value
+            };
+        }
+
+        function renderCard(elementId, card, isFaceDown = false) {
+            const cardElement = document.getElementById(elementId);
+            cardElement.innerHTML = '';
+            
+            if (isFaceDown) {
+                cardElement.className = "card back";
+                return;
+            }
+
+            cardElement.className = "card";
+            const redClass = card.isRed ? 'red-suit' : '';
+
+            cardElement.innerHTML = `
+                <div class="card-corner top-left ${redClass}">
+                    <div>${card.display}</div>
+                    <div style="font-size: 0.6em;">${card.suit}</div>
+                </div>
+                <div class="card-center ${redClass}">${card.suit}</div>
+                <div class="card-corner bottom-right ${redClass}">
+                    <div>${card.display}</div>
+                    <div style="font-size: 0.6em;">${card.suit}</div>
+                </div>
+            `;
+        }
+
+        async function startGame(mode) {
+            gameMode = mode;
+            changeScreen('screen-game');
+            hideResultOverlay();
+            
+            const modeLabel = document.getElementById('label-mode');
+            const scoreLabel = document.getElementById('label-score');
+            const chipsLabel = document.getElementById('label-chips');
+            const actionButtons = document.getElementById('action-buttons');
+
+            if (mode === 'normal') {
+                score = 0;
+                document.getElementById('label-player-id').innerText = '';
+                modeLabel.innerText = '通常モード';
+                scoreLabel.innerText = `スコア: ${score}`;
+                scoreLabel.style.display = 'block';
+                chipsLabel.style.display = 'none';
+                actionButtons.style.display = 'flex';
+                
+                initCards();
+                document.getElementById('game-info-msg').innerText = '次のカードは、現在より大きい(HIGH)か小さい(LOW)か？';
+            } else {
+                winStreak = 0;
+                potentialPayout = 0;
+                modeLabel.innerText = 'カジノモード';
+                chipsLabel.innerText = `チップ: ${chips}`;
+                chipsLabel.style.display = 'block';
+                scoreLabel.style.display = 'none';
+                
+                initCards();
+                applyFixedBet();
+            }
+        }
+
+        function initCards() {
+            currentCard = getRandomCard();
+            nextCard = getRandomCard();
+            while (nextCard.value === currentCard.value) {
+                nextCard = getRandomCard();
+            }
+            renderCard('card-current', currentCard, false);
+            renderCard('card-next', null, true);
+        }
+
+        async function applyFixedBet() {
+            const msgElement = document.getElementById('game-info-msg');
+            const actionButtons = document.getElementById('action-buttons');
+
+            if (chips < FIXED_BET) {
+                msgElement.innerText = `チップが足りません（残り: ${chips}）。タイトルに戻ります。`;
+                actionButtons.style.display = 'none';
+                setTimeout(returnToHome, 3000);
+                return;
+            }
+
+            chips = await updatePlayerChipsDelta(activePlayerId, -FIXED_BET);
+            document.getElementById('label-chips').innerText = `チップ: ${chips}`;
+
+            actionButtons.style.display = 'flex';
+            msgElement.innerText = `【10チップベット完了】 1勝ごとに *2, *3... と倍率アップ！チャレンジ開始！`;
+        }
+
+        async function makeGuess(prediction) {
+            renderCard('card-next', nextCard, false);
+            document.getElementById('action-buttons').style.display = 'none';
+
+            const isWin = (prediction === 'high' && nextCard.value > currentCard.value) ||
+                          (prediction === 'low' && nextCard.value < currentCard.value);
+
+            if (isWin) {
+                if (gameMode === 'normal') {
+                    score++;
+                    document.getElementById('label-score').innerText = `スコア: ${score}`;
+                    showWinOverlay(`正解！🎉`, `現在のスコア: ${score}`);
+                } else {
+                    winStreak++;
+                    let multiplier = winStreak + 1;
+                    if (multiplier > MAX_MULTIPLIER) multiplier = MAX_MULTIPLIER;
+                    potentialPayout = FIXED_BET * multiplier;
+
+                    showWinOverlay(
+                        `🎉 WIN !! 🎉`,
+                        `【現在 ${winStreak}連勝中！】 倍率: ${multiplier}倍<br>獲得予定: ${potentialPayout} チップ`
+                    );
+                }
+            } else {
+                if (gameMode === 'normal') {
+                    showLoseOverlay(`💀 LOSE 💀`, `残念、はずれです！<br>最終スコア: ${score}`);
+                } else {
+                    potentialPayout = 0;
+                    showLoseOverlay(
+                        `💀 LOSE 💀`,
+                        `残念！予想が外れました。<br>獲得予定チップは 0 になりました。`
+                    );
+                }
+            }
+        }
+
+        function showWinOverlay(title, subtext) {
+            const overlay = document.getElementById('result-overlay');
+            const oTitle = document.getElementById('overlay-title');
+            const oSub = document.getElementById('overlay-sub');
+            const oButtons = document.getElementById('overlay-buttons');
+
+            overlay.className = "result-overlay win";
+            oTitle.innerText = title;
+            oSub.innerHTML = subtext;
+
+            oButtons.innerHTML = '';
+            if (gameMode === 'normal') {
+                oButtons.innerHTML = `
+                    <button class="btn-huge btn-green" style="background-color: #2ecc71;" onclick="continueChallenge()">次のラウンドへ</button>
+                    <button class="btn-huge btn-gray" style="background-color: #7f8c8d; color: white;" onclick="returnToHome()">終了して戻る</button>
+                `;
+            } else {
+                const currentMultiplier = winStreak + 1;
+                const nextMultiplier = currentMultiplier >= MAX_MULTIPLIER ? MAX_MULTIPLIER : currentMultiplier + 1;
+
+                if (currentMultiplier >= MAX_MULTIPLIER) {
+                    oButtons.innerHTML = `
+                        <button class="btn-huge btn-yellow" style="background-color: #f1c40f;" onclick="collectChips()">最大倍率達成！回収して終了</button>
+                    `;
+                } else {
+                    oButtons.innerHTML = `
+                        <button class="btn-huge btn-green" style="background-color: #2ecc71;" onclick="continueChallenge()">次へ挑戦 (次：${nextMultiplier}倍)</button>
+                        <button class="btn-huge btn-yellow" style="background-color: #f1c40f;" onclick="collectChips()">ここで回収 (${potentialPayout}枚)</button>
+                    `;
+                }
+            }
+            overlay.style.display = 'flex';
+        }
+
+        function showLoseOverlay(title, subtext) {
+            const overlay = document.getElementById('result-overlay');
+            const oTitle = document.getElementById('overlay-title');
+            const oSub = document.getElementById('overlay-sub');
+            const oButtons = document.getElementById('overlay-buttons');
+
+            overlay.className = "result-overlay lose";
+            oTitle.innerText = title;
+            oSub.innerHTML = subtext;
+
+            oButtons.innerHTML = `
+                <button class="btn-huge btn-red" style="background-color: #e74c3c; color: white;" onclick="returnToHome()">タイトルへ戻る</button>
+            `;
+            overlay.style.display = 'flex';
+        }
+
+        function hideResultOverlay() {
+            document.getElementById('result-overlay').style.display = 'none';
+        }
+
+        function continueChallenge() {
+            hideResultOverlay();
+            
+            currentCard = nextCard;
+            nextCard = getRandomCard();
+            while (nextCard.value === currentCard.value) {
+                nextCard = getRandomCard();
+            }
+
+            renderCard('card-current', currentCard, false);
+            renderCard('card-next', null, true);
+
+            document.getElementById('action-buttons').style.display = 'flex';
+            
+            if (gameMode === 'normal') {
+                document.getElementById('game-info-msg').innerText = '次のカードはHIGH？それともLOW？';
+            } else {
+                const currentMultiplier = winStreak + 1;
+                document.getElementById('game-info-msg').innerText = `【現在: ${currentMultiplier}倍】 次を当てれば ${currentMultiplier + 1}倍にアップ！`;
+            }
+        }
+
+        async function collectChips() {
+            const overlay = document.getElementById('result-overlay');
+            const oTitle = document.getElementById('overlay-title');
+            const oSub = document.getElementById('overlay-sub');
+            const oButtons = document.getElementById('overlay-buttons');
+
+            if (potentialPayout > 0) {
+                oButtons.innerHTML = '<span style="font-size: 2rem; font-weight: bold; color: white;">通信中...</span>';
+                
+                chips = await updatePlayerChipsDelta(activePlayerId, potentialPayout);
+                
+                overlay.className = "result-overlay collect";
+                oTitle.innerText = "COLLECTED!";
+                oSub.innerHTML = `見事チャレンジ成功！<br>${potentialPayout} チップを獲得しました！`;
+                
+                oButtons.innerHTML = `
+                    <button class="btn-huge" style="background-color: #3498db; color: white; border-color: #fff;" onclick="returnToHome()">タイトルへ戻る</button>
+                `;
+            } else {
+                returnToHome();
+            }
+        }
+
+        function returnToHome() {
+            hideResultOverlay();
+            changeScreen('screen-home');
+        }
+    </script>
+</body>
+</html>
