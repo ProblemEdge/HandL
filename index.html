@@ -26,7 +26,7 @@
         .game-container {
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle, #14623a 0%, #0a3d20 100%);
+            background: url('assets/H and L_bg.png') center/cover no-repeat;
             position: relative;
             overflow: hidden;
             box-sizing: border-box;
@@ -241,18 +241,58 @@
             font-weight: bold;
             color: white;
             border: none;
-            border-radius: 30px;
             cursor: pointer;
             box-shadow: 0 8px 20px rgba(0,0,0,0.4);
             transition: transform 0.1s;
         }
         .btn-action:active { transform: scale(0.95); }
 
-        .btn-high { background-color: #28a745; }
-        .btn-low { background-color: #dc3545; }
+        .btn-high { 
+            background: url('assets/high_button.png') center/cover no-repeat;
+            color: transparent;
+            box-shadow: none;
+            border: none;
+        }
+        .btn-low { 
+            background: url('assets/low_button.png') center/cover no-repeat;
+            color: transparent;
+            box-shadow: none;
+            border: none;
+        }
         .btn-gray { background-color: #6c757d; }
         .btn-yellow { background-color: #f1c40f; color: black; }
+/* ボタン共通の背景設定を修正 */
+/* リザルト画面のボタン共通設定 */
+/* ==========================================
+           4. リザルト画面のボタン設定（背景色なし）
+        ========================================== */
+        .btn-huge {
+            background-color: transparent !important; /* 白い背景を強制解除 */
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain; 
+            border: none !important; /* 枠線も解除 */
+            cursor: pointer;
+            transition: transform 0.1s;
+            padding: 0 !important;
+            box-shadow: none !important; /* もし影が不要ならここを消す */
+        }
+        
+        .btn-huge:active { transform: scale(0.95); }
 
+        /* ダブルアップ(Continue)ボタン */
+        .btn-continue {
+            background-image: url('assets/doubleup_button.png');
+            min-width: clamp(240px, 30vw, 400px);
+            aspect-ratio: 2 / 1;
+        }
+
+        /* 降りる(Collect)ボタン */
+        .btn-collect {
+            background-image: url('assets/fin_button.png');
+            min-width: clamp(120px, 15vw, 200px);
+            aspect-ratio: 2 / 1;
+        }
         /* ==========================================
            4. リザルトオーバーレイ（ド派手演出）
         ========================================== */
@@ -300,6 +340,16 @@
             line-height: 1.4;
         }
 
+        .result-card-info {
+            font-size: clamp(1.2rem, 2.5vw, 2.5rem);
+            font-weight: bold;
+            margin-bottom: 3vh;
+            text-shadow: 2px 2px 0px #000;
+            text-align: center;
+            line-height: 1.6;
+            color: #ffffff;
+        }
+
         .overlay-btn-container {
             display: flex;
             gap: 4vw;
@@ -308,16 +358,26 @@
         }
 
         .btn-huge {
-            padding: 20px 40px;
-            font-size: clamp(1.2rem, 2.5vw, 2.2rem);
+            padding: 30px 60px;
+            font-size: clamp(1.5rem, 3vw, 2.5rem);
             font-weight: bold;
-            border-radius: 40px;
-            border: 4px solid #fff;
             cursor: pointer;
             box-shadow: 0 10px 20px rgba(0,0,0,0.5);
             transition: transform 0.1s;
         }
         .btn-huge:active { transform: scale(0.95); }
+        
+        .btn-continue {
+            padding: 50px 100px;
+            min-width: clamp(200px, 25vw, 350px);
+            min-height: clamp(150px, 18vh, 250px);
+        }
+        
+        .btn-collect {
+            padding: 25px 50px;
+            min-width: clamp(100px, 12vw, 175px);
+            min-height: clamp(75px, 9vh, 125px);
+        }
 
         /* アニメーション定義 */
         @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -366,6 +426,7 @@
             <!-- ド派手な勝敗演出用オーバーレイ -->
             <div id="result-overlay" class="result-overlay">
                 <div id="overlay-title" class="result-title">WIN !!</div>
+                <div id="overlay-card-info" class="result-card-info"></div>
                 <div id="overlay-sub" class="result-sub">2倍獲得！ (20チップ)</div>
                 <div class="overlay-btn-container" id="overlay-buttons">
                     <!-- JSから動的にボタンを生成 -->
@@ -472,6 +533,7 @@
         let winStreak = 0;
         let potentialPayout = 0;
         const MAX_MULTIPLIER = 10;
+        let currentScreen = 'screen-home';
 
         const suits = [
             { symbol: '♠', isRed: false }, { symbol: '♥', isRed: true },
@@ -490,6 +552,7 @@
                 screen.classList.remove('active');
             });
             document.getElementById(screenId).classList.add('active');
+            currentScreen = screenId;
         }
 
         function selectCasinoMode() {
@@ -652,11 +715,13 @@
             const isWin = (prediction === 'high' && nextCard.value > currentCard.value) ||
                           (prediction === 'low' && nextCard.value < currentCard.value);
 
+            const cardInfo = `現在のカード: ${currentCard.display}${currentCard.suit}<br>次のカード: ${nextCard.display}${nextCard.suit}`;
+
             if (isWin) {
                 if (gameMode === 'normal') {
                     score++;
                     document.getElementById('label-score').innerText = `スコア: ${score}`;
-                    showWinOverlay(`正解！🎉`, `現在のスコア: ${score}`);
+                    showWinOverlay(`正解！🎉`, cardInfo, `現在のスコア: ${score}`);
                 } else {
                     winStreak++;
                     let multiplier = winStreak + 1;
@@ -665,37 +730,41 @@
 
                     showWinOverlay(
                         `🎉 WIN !! 🎉`,
+                        cardInfo,
                         `【現在 ${winStreak}連勝中！】 倍率: ${multiplier}倍<br>獲得予定: ${potentialPayout} チップ`
                     );
                 }
             } else {
                 if (gameMode === 'normal') {
-                    showLoseOverlay(`💀 LOSE 💀`, `残念、はずれです！<br>最終スコア: ${score}`);
+                    showLoseOverlay(`💀 LOSE 💀`, cardInfo, `残念、はずれです！<br>最終スコア: ${score}`);
                 } else {
                     potentialPayout = 0;
                     showLoseOverlay(
                         `💀 LOSE 💀`,
+                        cardInfo,
                         `残念！予想が外れました。<br>獲得予定チップは 0 になりました。`
                     );
                 }
             }
         }
 
-        function showWinOverlay(title, subtext) {
+        function showWinOverlay(title, cardInfo, subtext) {
             const overlay = document.getElementById('result-overlay');
             const oTitle = document.getElementById('overlay-title');
+            const oCardInfo = document.getElementById('overlay-card-info');
             const oSub = document.getElementById('overlay-sub');
             const oButtons = document.getElementById('overlay-buttons');
 
             overlay.className = "result-overlay win";
             oTitle.innerText = title;
+            oCardInfo.innerHTML = cardInfo;
             oSub.innerHTML = subtext;
 
             oButtons.innerHTML = '';
             if (gameMode === 'normal') {
                 oButtons.innerHTML = `
-                    <button class="btn-huge btn-green" style="background-color: #2ecc71;" onclick="continueChallenge()">次のラウンドへ</button>
-                    <button class="btn-huge btn-gray" style="background-color: #7f8c8d; color: white;" onclick="returnToHome()">終了して戻る</button>
+                    <button class="btn-huge btn-continue" onclick="continueChallenge()"></button>
+                    <button class="btn-huge btn-collect" onclick="returnToHome()"></button>
                 `;
             } else {
                 const currentMultiplier = winStreak + 1;
@@ -703,26 +772,28 @@
 
                 if (currentMultiplier >= MAX_MULTIPLIER) {
                     oButtons.innerHTML = `
-                        <button class="btn-huge btn-yellow" style="background-color: #f1c40f;" onclick="collectChips()">最大倍率達成！回収して終了</button>
+                        <button class="btn-huge btn-collect" onclick="collectChips()"></button>
                     `;
                 } else {
                     oButtons.innerHTML = `
-                        <button class="btn-huge btn-green" style="background-color: #2ecc71;" onclick="continueChallenge()">次へ挑戦 (次：${nextMultiplier}倍)</button>
-                        <button class="btn-huge btn-yellow" style="background-color: #f1c40f;" onclick="collectChips()">ここで回収 (${potentialPayout}枚)</button>
+                        <button class="btn-huge btn-continue" onclick="continueChallenge()"></button>
+                        <button class="btn-huge btn-collect" onclick="collectChips()"></button>
                     `;
                 }
             }
             overlay.style.display = 'flex';
         }
 
-        function showLoseOverlay(title, subtext) {
+        function showLoseOverlay(title, cardInfo, subtext) {
             const overlay = document.getElementById('result-overlay');
             const oTitle = document.getElementById('overlay-title');
+            const oCardInfo = document.getElementById('overlay-card-info');
             const oSub = document.getElementById('overlay-sub');
             const oButtons = document.getElementById('overlay-buttons');
 
             overlay.className = "result-overlay lose";
             oTitle.innerText = title;
+            oCardInfo.innerHTML = cardInfo;
             oSub.innerHTML = subtext;
 
             oButtons.innerHTML = `
@@ -760,6 +831,7 @@
         async function collectChips() {
             const overlay = document.getElementById('result-overlay');
             const oTitle = document.getElementById('overlay-title');
+            const oCardInfo = document.getElementById('overlay-card-info');
             const oSub = document.getElementById('overlay-sub');
             const oButtons = document.getElementById('overlay-buttons');
 
@@ -770,6 +842,7 @@
                 
                 overlay.className = "result-overlay collect";
                 oTitle.innerText = "COLLECTED!";
+                oCardInfo.innerHTML = '';
                 oSub.innerHTML = `見事チャレンジ成功！<br>${potentialPayout} チップを獲得しました！`;
                 
                 oButtons.innerHTML = `
@@ -784,6 +857,58 @@
             hideResultOverlay();
             changeScreen('screen-home');
         }
+
+        // ==========================================
+        // キーボードコントロール
+        // ==========================================
+        document.addEventListener('keydown', (event) => {
+            const key = event.key.toLowerCase();
+            
+            if (key === 'a') {
+                // 左側のボタンをクリック
+                if (currentScreen === 'screen-home') {
+                    document.querySelector('.btn-circle.btn-green').click();
+                } else if (currentScreen === 'screen-qr') {
+                    // QR画面では左側ボタンなし
+                } else if (currentScreen === 'screen-game') {
+                    // ゲーム画面内のアクティブなボタンを判定
+                    const resultOverlay = document.getElementById('result-overlay');
+                    if (resultOverlay.style.display === 'flex') {
+                        // リザルト画面：左側のボタン
+                        const buttons = resultOverlay.querySelectorAll('button');
+                        if (buttons.length > 0) {
+                            buttons[0].click();
+                        }
+                    } else {
+                        // ゲームプレイ中：HIGH ボタン
+                        document.querySelector('.btn-high').click();
+                    }
+                }
+            } else if (key === 'l') {
+                // 右側のボタンをクリック
+                if (currentScreen === 'screen-home') {
+                    document.querySelector('.btn-circle.btn-red').click();
+                } else if (currentScreen === 'screen-qr') {
+                    // QR画面では右側ボタンをクリック（決定ボタン）
+                    document.querySelector('.manual-input-area .btn-action').click();
+                } else if (currentScreen === 'screen-game') {
+                    // ゲーム画面内のアクティブなボタンを判定
+                    const resultOverlay = document.getElementById('result-overlay');
+                    if (resultOverlay.style.display === 'flex') {
+                        // リザルト画面：右側のボタン
+                        const buttons = resultOverlay.querySelectorAll('button');
+                        if (buttons.length > 1) {
+                            buttons[buttons.length - 1].click();
+                        } else if (buttons.length === 1) {
+                            buttons[0].click();
+                        }
+                    } else {
+                        // ゲームプレイ中：LOW ボタン
+                        document.querySelector('.btn-low').click();
+                    }
+                }
+            }
+        });
     </script>
 </body>
 </html>
