@@ -715,45 +715,50 @@
             msgElement.innerText = `【10チップベット完了】 1勝ごとに *2, *3... と倍率アップ！チャレンジ開始！`;
         }
 
-        async function makeGuess(prediction) {
-            renderCard('card-next', nextCard, false);
-            document.getElementById('action-buttons').style.display = 'none';
+async function makeGuess(prediction) {
+    renderCard('card-next', nextCard, false);
+    document.getElementById('action-buttons').style.display = 'none';
 
-            const isWin = (prediction === 'high' && nextCard.value > currentCard.value) ||
-                          (prediction === 'low' && nextCard.value < currentCard.value);
+    const isWin = (prediction === 'high' && nextCard.value > currentCard.value) ||
+                  (prediction === 'low' && nextCard.value < currentCard.value);
 
-            const cardInfo = `現在のカード: ${currentCard.display}${currentCard.suit}<br>次のカード: ${nextCard.display}${nextCard.suit}`;
+    const cardInfo = `現在のカード: ${currentCard.display}${currentCard.suit}<br>次のカード: ${nextCard.display}${nextCard.suit}`;
 
-            if (isWin) {
-                if (gameMode === 'normal') {
-                    score++;
-                    document.getElementById('label-score').innerText = `スコア: ${score}`;
-                    showWinOverlay(`正解！🎉`, cardInfo, `現在のスコア: ${score}`);
-                } else {
-                    winStreak++;
-                    let multiplier = winStreak + 1;
-                    if (multiplier > MAX_MULTIPLIER) multiplier = MAX_MULTIPLIER;
-                    potentialPayout = FIXED_BET * multiplier;
+    // カードを見せるための「間」（ミリ秒単位、お好みで調整）
+    const REVEAL_DELAY = 1800;
 
-                    showWinOverlay(
-                        `🎉 WIN !! 🎉`,
-                        cardInfo,
-                        `【現在 ${winStreak}連勝中！】 倍率: ${multiplier}倍<br>獲得予定: ${potentialPayout} チップ`
-                    );
-                }
+    setTimeout(() => {
+        if (isWin) {
+            if (gameMode === 'normal') {
+                score++;
+                document.getElementById('label-score').innerText = `スコア: ${score}`;
+                showWinOverlay(`正解！🎉`, cardInfo, `現在のスコア: ${score}`);
             } else {
-                if (gameMode === 'normal') {
-                    showLoseOverlay(`💀 LOSE 💀`, cardInfo, `残念、はずれです！<br>最終スコア: ${score}`);
-                } else {
-                    potentialPayout = 0;
-                    showLoseOverlay(
-                        `💀 LOSE 💀`,
-                        cardInfo,
-                        `残念！予想が外れました。<br>獲得予定チップは 0 になりました。`
-                    );
-                }
+                winStreak++;
+                let multiplier = winStreak + 1;
+                if (multiplier > MAX_MULTIPLIER) multiplier = MAX_MULTIPLIER;
+                potentialPayout = FIXED_BET * multiplier;
+
+                showWinOverlay(
+                    `🎉 WIN !! 🎉`,
+                    cardInfo,
+                    `【現在 ${winStreak}連勝中！】 倍率: ${multiplier}倍<br>獲得予定: ${potentialPayout} チップ`
+                );
+            }
+        } else {
+            if (gameMode === 'normal') {
+                showLoseOverlay(`💀 LOSE 💀`, cardInfo, `残念、はずれです！<br>最終スコア: ${score}`);
+            } else {
+                potentialPayout = 0;
+                showLoseOverlay(
+                    `💀 LOSE 💀`,
+                    cardInfo,
+                    `残念！予想が外れました。<br>獲得予定チップは 0 になりました。`
+                );
             }
         }
+    }, REVEAL_DELAY);
+}
 
         function showWinOverlay(title, cardInfo, subtext) {
     playSound(winSound);
@@ -786,7 +791,7 @@
                     oButtons.innerHTML = `
                         <button class="btn-huge btn-continue" onclick="continueChallenge()"></button>
                         <button class="btn-huge btn-collect" onclick="collectChips()"></button>
-                    `;
+                    `;makeGuess 
                 }
             }
             overlay.style.display = 'flex';
