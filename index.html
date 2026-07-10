@@ -725,7 +725,7 @@ async function makeGuess(prediction) {
     const cardInfo = `現在のカード: ${currentCard.display}${currentCard.suit}<br>次のカード: ${nextCard.display}${nextCard.suit}`;
 
     // カードを見せるための「間」（ミリ秒単位、お好みで調整）
-    const REVEAL_DELAY = 1800;
+    const REVEAL_DELAY = 800;
 
     setTimeout(() => {
         if (isWin) {
