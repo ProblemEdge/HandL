@@ -164,6 +164,61 @@
             padding-bottom: 15px;
         }
 
+#progress-container {
+            width: 100%;
+            max-width: 700px;
+            margin-top: 2vh;
+        }
+
+        #progress-label {
+            text-align: center;
+            font-size: clamp(1rem, 1.8vw, 1.6rem);
+            font-weight: bold;
+            color: #f1c40f;
+            margin-bottom: 1vh;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        #progress-bar-track {
+            position: relative;
+            width: 100%;
+            height: 22px;
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.4);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        #progress-bar-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 10%;
+            background: linear-gradient(90deg, #f1c40f, #ff8c00);
+            border-radius: 12px;
+            transition: width 0.5s ease;
+        }
+
+        #progress-dots {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+        }
+
+        .progress-dot {
+            flex: 1;
+            border-right: 2px solid rgba(0,0,0,0.3);
+            box-sizing: border-box;
+        }
+
+        .progress-dot:last-child {
+            border-right: none;
+        }
+
         .game-board {
             display: flex;
             justify-content: center;
@@ -439,6 +494,15 @@
                 <span id="label-score" style="display: none;">スコア: 0</span>
                 <span id="label-chips" style="display: none;">チップ: -</span>
             </div>
+            <div id="progress-container" style="display: none;">
+                <div id="progress-label">現在の倍率: 1倍</div>
+                <div id="progress-bar-track">
+                    <div id="progress-bar-fill"></div>
+                    <div id="progress-dots"></div>
+                </div>
+            </div>
+
+            <div class="game-board">
 
             <div class="game-board">
                 <div class="card-slot">
@@ -653,7 +717,7 @@
             `;
         }
 
-        async function startGame(mode) {
+async function startGame(mode) {
             gameMode = mode;
             changeScreen('screen-game');
             hideResultOverlay();
@@ -662,6 +726,7 @@
             const scoreLabel = document.getElementById('label-score');
             const chipsLabel = document.getElementById('label-chips');
             const actionButtons = document.getElementById('action-buttons');
+            const progressContainer = document.getElementById('progress-container');
 
             if (mode === 'normal') {
                 score = 0;
@@ -671,6 +736,7 @@
                 scoreLabel.style.display = 'block';
                 chipsLabel.style.display = 'none';
                 actionButtons.style.display = 'flex';
+                progressContainer.style.display = 'none';
                 
                 initCards();
                 document.getElementById('game-info-msg').innerText = '次のカードは、現在より大きい(HIGH)か小さい(LOW)か？';
@@ -681,6 +747,10 @@
                 chipsLabel.innerText = `チップ: ${chips}`;
                 chipsLabel.style.display = 'block';
                 scoreLabel.style.display = 'none';
+                progressContainer.style.display = 'block';
+
+                setupProgressDots();
+                updateProgressBar();
                 
                 initCards();
                 applyFixedBet();
@@ -713,6 +783,28 @@
 
             actionButtons.style.display = 'flex';
             msgElement.innerText = `【10チップベット完了】 1勝ごとに *2, *3... と倍率アップ！チャレンジ開始！`;
+        }
+
+        function setupProgressDots() {
+            const dotsContainer = document.getElementById('progress-dots');
+            dotsContainer.innerHTML = '';
+            for (let i = 0; i < MAX_MULTIPLIER; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'progress-dot';
+                dotsContainer.appendChild(dot);
+            }
+        }
+
+        function updateProgressBar() {
+            const currentMultiplier = winStreak + 1;
+            const clamped = Math.min(currentMultiplier, MAX_MULTIPLIER);
+            const percent = (clamped / MAX_MULTIPLIER) * 100;
+
+            document.getElementById('progress-bar-fill').style.width = `${percent}%`;
+            document.getElementById('progress-label').innerText =
+                clamped >= MAX_MULTIPLIER
+                    ? `最大倍率到達！ ${clamped}倍`
+                    : `現在の倍率: ${clamped}倍 (MAX ${MAX_MULTIPLIER}倍)`;
         }
 
 async function makeGuess(prediction) {
@@ -819,8 +911,7 @@ async function makeGuess(prediction) {
         function hideResultOverlay() {
             document.getElementById('result-overlay').style.display = 'none';
         }
-
-        function continueChallenge() {
+function continueChallenge() {
             hideResultOverlay();
             
             currentCard = nextCard;
@@ -839,9 +930,9 @@ async function makeGuess(prediction) {
             } else {
                 const currentMultiplier = winStreak + 1;
                 document.getElementById('game-info-msg').innerText = `【現在: ${currentMultiplier}倍】 次を当てれば ${currentMultiplier + 1}倍にアップ！`;
+                updateProgressBar();
             }
         }
-
         async function collectChips() {
             const overlay = document.getElementById('result-overlay');
             const oTitle = document.getElementById('overlay-title');
