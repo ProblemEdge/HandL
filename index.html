@@ -469,6 +469,13 @@
         // ==========================================
         const USE_REAL_DB = true;
         const API_BASE_URL = 'https://welbnkxi.vercel.app';
+        const buttonSound = new Audio("se/button.mp3"); // 共通クリック音
+        const winSound     = new Audio("se/win.mp3");   // 勝利音
+        const loseSound    = new Audio("se/lose.mp3");  // 敗北音
+        function playSound(audio) {
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("再生エラー:", e));
+        }
 
         async function fetchPlayerChips(playerId) {
             if (!USE_REAL_DB) {
@@ -749,6 +756,7 @@
         }
 
         function showWinOverlay(title, cardInfo, subtext) {
+    playSound(winSound);
             const overlay = document.getElementById('result-overlay');
             const oTitle = document.getElementById('overlay-title');
             const oCardInfo = document.getElementById('overlay-card-info');
@@ -785,6 +793,7 @@
         }
 
         function showLoseOverlay(title, cardInfo, subtext) {
+    playSound(loseSound);
             const overlay = document.getElementById('result-overlay');
             const oTitle = document.getElementById('overlay-title');
             const oCardInfo = document.getElementById('overlay-card-info');
@@ -857,6 +866,15 @@
             hideResultOverlay();
             changeScreen('screen-home');
         }
+        // ==========================================
+        // 全ボタン共通のクリック音（イベント委譲）
+        // ==========================================
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (btn) {
+                playSound(buttonSound);
+            }
+        }, true); // captureフェーズで拾うことで確実に検知
 
         // ==========================================
         // キーボードコントロール
