@@ -828,13 +828,6 @@ async function startGame(mode) {
             const msgElement = document.getElementById('game-info-msg');
             const actionButtons = document.getElementById('action-buttons');
 
-            if (chips < FIXED_BET) {
-                msgElement.innerText = `チップが足りません（残り: ${chips}）。タイトルに戻ります。`;
-                actionButtons.style.display = 'none';
-                setTimeout(returnToHome, 3000);
-                return;
-            }
-
             chips = await updatePlayerChipsDelta(activePlayerId, -FIXED_BET);
             document.getElementById('label-chips').innerText = `チップ: ${chips}`;
 
