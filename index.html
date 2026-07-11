@@ -701,7 +701,7 @@
     qrbox: { width: 300, height: 300 }
 };
             html5QrCode.start(
-                { facingMode: "user" },
+                { facingMode: "environment" },
                 config,
                 (decodedText) => {
                     handlePlayerScanned(decodedText);
