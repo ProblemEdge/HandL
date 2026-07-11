@@ -698,7 +698,7 @@
             html5QrCode = new Html5Qrcode("reader");
             const config = { fps: 10, qrbox: { width: 180, height: 180 } };
             html5QrCode.start(
-                { facingMode: "environment" },
+                { facingMode: "user" },
                 config,
                 (decodedText) => {
                     handlePlayerScanned(decodedText);
