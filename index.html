@@ -602,7 +602,7 @@
             if (!USE_REAL_DB) {
                 let localChips = localStorage.getItem(`player_${playerId}_chips`);
                 if (localChips === null) {
-                    localChips = 100;
+                    localChips = 200;
                     localStorage.setItem(`player_${playerId}_chips`, localChips);
                 }
                 return parseInt(localChips, 10);
@@ -616,13 +616,13 @@
                 return Number(data.chips);
             } catch (error) {
                 console.error("DBからのデータ取得に失敗:", error);
-                return 100;
+                return 200;
             }
         }
 
         async function updatePlayerChipsDelta(playerId, delta) {
             if (!USE_REAL_DB) {
-                let localChips = parseInt(localStorage.getItem(`player_${playerId}_chips`) || "100", 10);
+                let localChips = parseInt(localStorage.getItem(`player_${playerId}_chips`) || "200", 10);
                 localChips += delta;
                 localStorage.setItem(`player_${playerId}_chips`, localChips);
                 return localChips;
@@ -656,7 +656,7 @@
         let currentCard = null;
         let nextCard = null;
         let html5QrCode = null;
-        const FIXED_BET = 100;
+        const FIXED_BET = 200;
 
         let winStreak = 0;
         let potentialPayout = 0;
@@ -835,7 +835,7 @@ async function startGame(mode) {
             document.getElementById('label-chips').innerText = `チップ: ${chips}`;
 
             actionButtons.style.display = 'flex';
-            msgElement.innerText = `【10チップベット完了】 1勝ごとに *2, *3... と倍率アップ！チャレンジ開始！`;
+            msgElement.innerText = `【200チップベット完了】 1勝ごとに *2, *3... と倍率アップ！チャレンジ開始！`;
         }
 
         function setupProgressDots() {
@@ -851,7 +851,7 @@ async function startGame(mode) {
         function updateProgressBar() {
             const currentMultiplier = winStreak + 1;
             const clamped = Math.min(currentMultiplier, MAX_MULTIPLIER);
-            const percent = (clamped / MAX_MULTIPLIER) * 100;
+            const percent = (clamped / MAX_MULTIPLIER) * 200;
 
             document.getElementById('progress-bar-fill').style.width = `${percent}%`;
             document.getElementById('progress-label').innerText =
